@@ -4,6 +4,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
 from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
+import warnings
+
+# Ignore warnings from ARIMA model fitting
+warnings.filterwarnings("ignore")
 
 def find_best_arima(data, p_range, d_range, q_range):
     """
@@ -36,14 +40,15 @@ def find_best_arima(data, p_range, d_range, q_range):
                     if bic < best_bic:
                         best_bic = bic
                         best_model = model_fit
-                except:
+                except Exception as e:
+                    print(f"ARIMA({p},{d},{q}) failed: {e}")
                     continue
 
     return best_model
 
 # Define parameters
 ticker = "HDFCBANK.NS"
-start_date = "2019-11-01"
+start_date = "2024-01-01"
 end_date = "2024-08-06"
 forecast_days = 20
 num_simulations = 100
@@ -61,8 +66,9 @@ q_range = range(0, 3)
 best_model = find_best_arima(prices, p_range, d_range, q_range)
 
 # Forecast using ARIMA
-arima_forecast = best_model.forecast(steps=forecast_days)
-arima_pred_mean = arima_forecast.values
+arima_forecast = best_model.get_forecast(steps=forecast_days)
+arima_pred_mean = arima_forecast.predicted_mean
+arima_conf_int = arima_forecast.conf_int()
 
 # Calculate residuals from ARIMA model
 residuals = best_model.resid
@@ -87,7 +93,7 @@ price_paths = np.zeros_like(gbm_residuals)
 last_actual_price = prices.iloc[-1]
 
 for i in range(num_simulations):
-    price_paths[:, i] = arima_pred_mean + gbm_residuals[:, i]
+    price_paths[:, i] = arima_pred_mean.values + gbm_residuals[:, i]
 
 # Evaluate the forecast
 # Note: Ensure you have enough data to compare forecast with actual prices
@@ -110,12 +116,25 @@ plt.plot(prices, label='Historical Prices')
 forecast_index = pd.date_range(start=prices.index[-1], periods=forecast_days+1, freq='B')[1:]
 plt.plot(forecast_index, arima_pred_mean, label='ARIMA Forecast', color='orange')
 
-# Plot simulated paths
+# Plot the ARIMA forecast confidence intervals
+plt.fill_between(forecast_index, arima_conf_int.iloc[:, 0], arima_conf_int.iloc[:, 1], color='pink', alpha=0.5, label='ARIMA 95% CI')
+
+# Plot simulated paths with better visual representation
 for i in range(num_simulations):
-    plt.plot(forecast_index, price_paths[:, i], color='blue', alpha=0.1)
+    plt.plot(forecast_index, price_paths[:, i], color='skyblue', alpha=0.3)
+
+# Plot the range of simulated paths
+plt.fill_between(forecast_index, np.min(price_paths, axis=1), np.max(price_paths, axis=1), color='lightblue', alpha=0.4, label='Simulated Path Range')
+
+# Improve y-axis ticks and labels
+y_min = min(prices.min(), arima_pred_mean.min())
+y_max = max(prices.max(), arima_pred_mean.max())
+y_range = np.linspace(y_min, y_max, 20)
+plt.yticks(y_range, [f'{y:.2f}' for y in y_range])
 
 plt.xlabel('Date')
 plt.ylabel('Price')
 plt.legend()
 plt.title('HDFC Bank Stock Price Forecast using ARIMA and GBM')
+plt.grid(True)
 plt.show()
