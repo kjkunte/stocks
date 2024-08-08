@@ -9,7 +9,7 @@ stock_codes = [
 ]
 
 # Download stock data
-stock_data = yf.download(stock_codes, start='2020-01-01', end='2023-01-01')
+stock_data = yf.download(stock_codes, start='2019-01-01', end='2024-08-01')
 
 # Display data
 print(stock_data.head())
