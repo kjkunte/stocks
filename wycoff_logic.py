@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Download historical data for ICICI Bank
-symbol = 'HDFCBANK.NS'  # ICICI Bank NSE symbol
-data = yf.download(symbol, start="2013-01-01", end="2024-08-01")
+symbol = 'ICICIBANK.NS'  # ICICI Bank NSE symbol
+data = yf.download(symbol, start="2022-01-01", end="2024-08-12")
 
 # Calculate moving averages
-data['50_MA'] = data['Close'].rolling(window=50).mean()
-data['200_MA'] = data['Close'].rolling(window=200).mean()
+data['50_MA'] = data['Close'].rolling(window=5).mean()
+data['200_MA'] = data['Close'].rolling(window=20).mean()
 
 # Initialize the Phase column as an object (string) type
 data['Phase'] = np.nan
@@ -20,14 +20,14 @@ def identify_wyckoff_phases_simple(data):
     for i in range(1, len(data)):
         if data['50_MA'].iloc[i] > data['200_MA'].iloc[i]:
             if data['Close'].iloc[i] > data['200_MA'].iloc[i] and data['Close'].iloc[i] < data['50_MA'].iloc[i]:
-                data.loc[data.index[i], 'Phase'] = 'Distribution'
+                data.loc[data.index[i], 'Phase'] = 'Accumulation'
             elif data['Close'].iloc[i] < data['200_MA'].iloc[i]:
                 data.loc[data.index[i], 'Phase'] = 'Markdown'
             elif data['Close'].iloc[i] > data['50_MA'].iloc[i]:
                 data.loc[data.index[i], 'Phase'] = 'Markup'
         elif data['50_MA'].iloc[i] < data['200_MA'].iloc[i]:
             if data['Close'].iloc[i] > data['200_MA'].iloc[i] and data['Close'].iloc[i] < data['50_MA'].iloc[i]:
-                data.loc[data.index[i], 'Phase'] = 'Accumulation'
+                data.loc[data.index[i], 'Phase'] = 'Distribution'
             elif data['Close'].iloc[i] > data['50_MA'].iloc[i]:
                 data.loc[data.index[i], 'Phase'] = 'Markup'
             elif data['Close'].iloc[i] < data['200_MA'].iloc[i]:
